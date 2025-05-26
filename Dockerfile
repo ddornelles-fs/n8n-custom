@@ -20,7 +20,8 @@ ENV N8N_BASIC_AUTH_ACTIVE=true
 ENV N8N_BASIC_AUTH_USER=admin
 ENV N8N_BASIC_AUTH_PASSWORD=securepassword
 ENV N8N_HOST=0.0.0.0
-ENV WEBHOOK_URL=https://n8n-custom-9a5c.onrender.com   # Replace with your actual public URL
+ENV WEBHOOK_URL=https://n8n-custom-9a5c.onrender.com  
+ # Replace with your actual public URL
 
 EXPOSE 5678
 
