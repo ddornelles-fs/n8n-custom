@@ -11,6 +11,7 @@ RUN apt-get update && \
 
 # Install n8n
 RUN npm install -g n8n
+ENV N8N_ENABLE_NODE_DEV=true
 
 # Add your cropping script
 COPY dashed_crop.py /data/scripts/dashed_crop.py
