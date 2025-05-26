@@ -8,3 +8,4 @@ RUN apt-get update && apt-get install -y \
     && pip3 install opencv-python pymupdf
 
 USER node
+COPY dashed_crop.py /data/scripts/dashed_crop.py
