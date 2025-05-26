@@ -1,18 +1,26 @@
-# Use official n8n image (Alpine-based)
-FROM n8nio/n8n:1.94.0
+FROM node:18-bullseye
 
-# Switch to root to install system dependencies
-USER root
+# Set working directory
+WORKDIR /app
 
-# Install dependencies with apk (Alpine's package manager)
-RUN apk update && apk add --no-cache \
-    python3 py3-pip python3-dev gcc musl-dev \
-    libffi-dev jpeg-dev zlib-dev \
-    glib-dev libxrender libxext libsm \
-    && pip3 install --no-cache-dir opencv-python PyMuPDF
+# Install system dependencies for OpenCV and PyMuPDF
+RUN apt-get update && \
+    apt-get install -y python3 python3-pip python3-dev gcc \
+    libglib2.0-0 libsm6 libxext6 libxrender-dev libglib2.0-dev \
+    && python3 -m pip install --no-cache-dir opencv-python PyMuPDF
 
-# Copy your Python script into the container
+# Install n8n with all nodes including Dropbox Trigger
+RUN npm install -g n8n@1.94.0
+
+# Enable dev/community nodes
+ENV N8N_ENABLE_NODE_DEV=true
+
+# Copy your cropping script
 COPY dashed_crop.py /data/scripts/dashed_crop.py
+
+# Create data volume
+RUN mkdir -p /home/node/.n8n
+VOLUME ["/home/node/.n8n"]
 
 # Set environment variables
 ENV N8N_BASIC_AUTH_ACTIVE=true
@@ -21,9 +29,7 @@ ENV N8N_BASIC_AUTH_PASSWORD=securepassword
 ENV N8N_HOST=0.0.0.0
 ENV WEBHOOK_URL=http://localhost:5678
 
-# Expose default port and persist data
 EXPOSE 5678
-VOLUME ["/home/node/.n8n"]
 
-# Switch back to node user for runtime
-USER node
+# Start n8n
+CMD ["n8n"]
