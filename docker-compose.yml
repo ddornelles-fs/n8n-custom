@@ -2,13 +2,14 @@ version: '3'
 
 services:
   n8n:
-    image: your-image-name
+    image: your-image-name  # replace with your custom n8n image name
     ports:
       - "5678:5678"
     volumes:
       - ./n8n-data:/data
       - ./n8n-scripts:/data/scripts
+      - ./n8n-output:/data/output   # ✅ MOUNT THE OUTPUT FOLDER HERE
     environment:
       - N8N_BASIC_AUTH_ACTIVE=true
       - N8N_BASIC_AUTH_USER=user
-      - N8N_BASIC_AUTH_PASSWORD=password
+      - N8N_BASIC_AUTH
