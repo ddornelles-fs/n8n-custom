@@ -4,7 +4,23 @@ import numpy as np
 import os
 import sys
 
-def detect_dashed_boxes(image, min_width=340, min_height=225, max_density=3.5):
+def count_segments(line, min_gap=3):
+    """
+    Counts how many separate white pixel segments exist in a 1D binary line array.
+    """
+    binary_line = (line > 0).astype(np.uint8)
+    segments = 0
+    in_segment = False
+    for value in binary_line:
+        if value and not in_segment:
+            segments += 1
+            in_segment = True
+        elif not value:
+            in_segment = False
+    return segments
+
+
+def detect_dashed_boxes(image, min_width=340, min_height=225, max_density=3.5, min_segments=3):
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     blur = cv2.GaussianBlur(gray, (3, 3), 0)
     edges = cv2.Canny(blur, 30, 100)
@@ -16,11 +32,10 @@ def detect_dashed_boxes(image, min_width=340, min_height=225, max_density=3.5):
         approx = cv2.approxPolyDP(cnt, 0.03 * cv2.arcLength(cnt, True), True)
         if len(approx) == 4 and cv2.contourArea(cnt) > 1000:
             x, y, w, h = cv2.boundingRect(cnt)
-
             if w < min_width or h < min_height:
                 continue
 
-            # Create a mask and count edge pixels along the contour
+            # Create a mask to get edge pixels along the contour
             mask = np.zeros_like(gray)
             cv2.drawContours(mask, [cnt], -1, 255, 2)
             edge_pixels = cv2.bitwise_and(edges, mask)
@@ -29,14 +44,19 @@ def detect_dashed_boxes(image, min_width=340, min_height=225, max_density=3.5):
             arc_length = cv2.arcLength(cnt, True)
             dashiness_ratio = non_zero_count / arc_length if arc_length > 0 else 999
 
-            print(f"[DEBUG] Box {x},{y},{w},{h} | Dashiness: {dashiness_ratio:.2f}")
+            # Check how many edge segments exist on top border
+            top_row = edges[y, x:x + w]
+            segment_count = count_segments(top_row)
 
-            # Accept box if it's likely dashed
-            if dashiness_ratio < max_density:
+            print(f"[DEBUG] Box {x},{y},{w},{h} | Dashiness: {dashiness_ratio:.2f} | Segments: {segment_count}")
+
+            # Require both: low edge density + multiple edge segments
+            if dashiness_ratio < max_density and segment_count >= min_segments:
                 boxes.append((x, y, x + w, y + h))
 
     print(f"[DEBUG] Total dashed boxes detected: {len(boxes)}")
     return boxes
+
 
 def convert_page_to_image(page, zoom=3):
     mat = fitz.Matrix(zoom, zoom)
