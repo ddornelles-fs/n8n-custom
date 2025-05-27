@@ -33,6 +33,9 @@ def resize_for_thermal(cropped, target_width=384):
     return cv2.resize(cropped, (target_width, new_height), interpolation=cv2.INTER_AREA)
 
 def process_pdf(pdf_path, output_folder):
+    if not os.path.exists(pdf_path):
+        print(f"❌ Input file not found: {pdf_path}")
+        sys.exit(1)
     os.makedirs(output_folder, exist_ok=True)
     doc = fitz.open(pdf_path)
     count = 0
@@ -40,18 +43,3 @@ def process_pdf(pdf_path, output_folder):
         image = convert_page_to_image(page)
         boxes = detect_dashed_boxes(image)
         for j, (x0, y0, x1, y1) in enumerate(boxes):
-            cropped = image[y0:y1, x0:x1]
-            cropped = resize_for_thermal(cropped, target_width=384)
-            out_path = os.path.join(output_folder, f"page{i}_crop{j}.jpg")
-            cv2.imwrite(out_path, cropped)
-            print(f"Saved {out_path}")
-            count += 1
-    print(f"Total crops saved: {count}")
-
-if __name__ == "__main__":
-    if len(sys.argv) != 3:
-        print("Usage: python dashed_crop.py input.pdf output_folder")
-        sys.exit(1)
-    input_pdf = sys.argv[1]
-    output_dir = sys.argv[2]
-    process_pdf(input_pdf, output_dir)
