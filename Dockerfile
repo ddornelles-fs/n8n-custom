@@ -11,7 +11,9 @@ RUN apt-get update && apt-get install -y \
 RUN npm install -g n8n
 
 COPY data/scripts/dashed_crop.py /data/scripts/dashed_crop.py
+COPY ./n8n-scripts /data/scripts
 RUN mkdir -p /data/output
+
 
 EXPOSE 5678
 CMD ["n8n"]
