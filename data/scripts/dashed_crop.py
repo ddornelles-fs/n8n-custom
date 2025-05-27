@@ -4,8 +4,7 @@ import numpy as np
 import os
 import sys
 
-def detect_dashed_boxes(image):
-    print("[DEBUG] Running dashed box detection")
+def detect_dashed_boxes(image, min_width=340, min_height=225):
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     blur = cv2.GaussianBlur(gray, (3, 3), 0)
     edges = cv2.Canny(blur, 30, 100)
@@ -15,12 +14,11 @@ def detect_dashed_boxes(image):
         approx = cv2.approxPolyDP(cnt, 0.03 * cv2.arcLength(cnt, True), True)
         if len(approx) == 4 and cv2.contourArea(cnt) > 1000:
             x, y, w, h = cv2.boundingRect(cnt)
-            boxes.append((x, y, x + w, y + h))
-    print(f"[DEBUG] Found {len(boxes)} boxes")
+            if w >= min_width and h >= min_height:
+                boxes.append((x, y, x + w, y + h))
     return boxes
 
 def convert_page_to_image(page, zoom=3):
-    print("[DEBUG] Converting page to image")
     mat = fitz.Matrix(zoom, zoom)
     pix = page.get_pixmap(matrix=mat)
     img = np.frombuffer(pix.samples, dtype=np.uint8).reshape(pix.height, pix.width, pix.n)
@@ -36,37 +34,31 @@ def resize_for_thermal(cropped, target_width=384):
     return cv2.resize(cropped, (target_width, new_height), interpolation=cv2.INTER_AREA)
 
 def process_pdf(pdf_path, output_folder):
-    print(f"[DEBUG] Processing PDF: {pdf_path}")
     os.makedirs(output_folder, exist_ok=True)
-    
-    if not os.path.exists(pdf_path):
-        print(f"[ERROR] File not found: {pdf_path}")
-        return
-
     doc = fitz.open(pdf_path)
-    print(f"[DEBUG] PDF has {len(doc)} pages")
     count = 0
-
     for i, page in enumerate(doc):
         print(f"[DEBUG] Processing page {i}")
         image = convert_page_to_image(page)
-        boxes = detect_dashed_boxes(image)
-
+        boxes = detect_dashed_boxes(image, min_width=340, min_height=225)
+        print(f"[DEBUG] Found {len(boxes)} valid boxes")
         for j, (x0, y0, x1, y1) in enumerate(boxes):
             cropped = image[y0:y1, x0:x1]
-            cropped = resize_for_thermal(cropped)
+            cropped = resize_for_thermal(cropped, target_width=384)
             out_path = os.path.join(output_folder, f"page{i}_crop{j}.jpg")
             cv2.imwrite(out_path, cropped)
-            print(f"[DEBUG] Saved: {out_path}")
+            print(f"[DEBUG] Saved {out_path}")
             count += 1
-
-    print(f"[DEBUG] Total crops saved: {count}")
+    print(f"[INFO] Total crops saved: {count}")
 
 if __name__ == "__main__":
     if len(sys.argv) != 3:
         print("Usage: python dashed_crop.py input.pdf output_folder")
         sys.exit(1)
-
     input_pdf = sys.argv[1]
     output_dir = sys.argv[2]
+    print(f"[DEBUG] Processing PDF: {input_pdf}")
+    if not os.path.exists(input_pdf):
+        print(f"[ERROR] File not found: {input_pdf}")
+        sys.exit(1)
     process_pdf(input_pdf, output_dir)
